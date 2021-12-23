@@ -1,0 +1,72 @@
+<product-recommendations class="product-recommendations" data-url="{{ routes.product_recommendations_url }}?section_id={{ section.id }}&product_id={{ product.id }}&limit=8">
+  {%- if recommendations.performed and recommendations.products_count > 0 -%}
+    <div class="content-section full-width-section-content gutter--on">
+      <h3 class="h1">{{ section.settings.heading }}</h3>
+      <css-slider 
+        style="display:block" 
+        class="collection--slider collection--{{ settings.grid_style }} css-slider--simple-dots"
+        data-options='{
+          "selector": ".product-item",
+          "navigation": false,
+          "groupCells": true
+        }'
+      > 
+        {%- liquid
+          for recommendation in recommendations.products
+            render 'product-item', product: recommendation, index: forloop.index
+          endfor
+        -%}
+      </css-slider>
+    </div>
+  {%- endif -%}
+</product-recommendations>
+
+{% javascript %}
+  class ProductRecommendations extends HTMLElement {
+    constructor() {
+      super();
+      const handleIntersection = (entries, observer) => {
+        if (!entries[0].isIntersecting) return;
+        observer.unobserve(this);
+
+        fetch(this.dataset.url)
+          .then(response => response.text())
+          .then(text => {
+            const innerHTML = new DOMParser()
+                .parseFromString(text, 'text/html')
+                .querySelector('product-recommendations');
+            if ( innerHTML && innerHTML.querySelectorAll('.product-item').length > 0 ) {
+              this.innerHTML = innerHTML.innerHTML;
+            }
+          })
+          .catch(e => {
+            console.error(e);
+          });
+      }
+
+      new IntersectionObserver(handleIntersection.bind(this), {rootMargin: '0px 0px 200px 0px'}).observe(this);
+    }
+  }
+
+  customElements.define('product-recommendations', ProductRecommendations);
+{% endjavascript %}
+
+{% schema %}
+  {
+    "name": "t:sections.product-recommendations.name",
+    "class": "shopify-section-product-recommendations",
+    "settings": [
+      {
+        "type": "header",
+        "content": "t:sections.product-recommendations.settings.header__1.content",
+        "info": "t:sections.product-recommendations.settings.header__1.info"
+      },
+      {
+        "type": "text",
+        "id": "heading",
+        "label": "t:sections.product-recommendations.settings.heading.label",
+        "default": "You may also like"
+      }
+    ]
+  }
+{% endschema %}
